@@ -5,7 +5,7 @@ module Main where
 import System.Environment
 import GHC.Generics
 import Control.Monad
-import Data.List (sortOn, intercalate)
+import Data.List (sortOn, intercalate, nub)
 import Data.Char (isHexDigit, digitToInt, toLower)
 import Data.Aeson
 import Data.Aeson.TH
@@ -21,12 +21,28 @@ errNoInputsGiven = "No inputs given"
 -- the closest Term 256 color using the Euclidean distance
 -- formula.
 
+square :: Int -> Int
+square x = x * x
+
 -- TODO: Replace Euclidean distance with a better measurement
 --       because it is not the best to get (visually) closest
 --       colors.
 euclideanDistance :: [Int] -> [Int] -> Float
-euclideanDistance a b = sqrt . fromIntegral $ sum $ map square' $ zipWith (-) a b
-        where square' x = x * x
+euclideanDistance a b = sqrt . fromIntegral $ sum $ map square $ zipWith (-) a b
+
+-- Low-cost approximation of Euclidean Distance
+-- Taken from https://www.compuphase.com/cmetric.htm
+weightedEuclideanDistance :: [Int] -> [Int] -> Float
+weightedEuclideanDistance a b = do
+    let r1 = fromIntegral $ head a :: Float
+    let r2 = fromIntegral $ head b :: Float
+    let r = (r1 + r2) / 2
+    let dist = map square $ zipWith (-) a b
+    let weightG = 4.0
+    let weightR = 2 + r / 256
+    let weightB = 2 + ((255 - r) / 256)
+    sqrt $ weightR * fromIntegral (head dist) + weightG * fromIntegral (dist !! 1) + weightB * fromIntegral (last dist)
+
 
 data RGB = RGB
            { r :: Int
@@ -104,7 +120,7 @@ inputToColor hex = Color {colorHex = map toLower hex, colorRgb = parseHexString 
 
 getClosestColors :: Color -> [Color] -> [CmpResult]
 getClosestColors inputColor colors = [CmpResult (colorHex c) (colorRgb c) (getDistance' inputColor c) | c <- colors]
-    where getDistance' from to = euclideanDistance (colorRgb from) (colorRgb to)
+    where getDistance' from to = weightedEuclideanDistance (colorRgb from) (colorRgb to)
 
 validateArgs :: [String] -> Color
 validateArgs i 
@@ -124,18 +140,23 @@ main = do
             Left err -> error err
             Right content -> [ inputToColor $ normalizeColorHex $ hexString tc | tc <- content]
 
+    -- Remove grey, black, and whites from the possible list because they shouldn't
+    -- match against a color.
+    -- TODO: This should be a passable flag
+    let filteredTerm256Colors = filter (\color -> length (nub (colorRgb color)) > 1) term256Colors
+
     -- Read user input
     i <- getArgs
     let inputColor = validateArgs i
 
     -- Compare colors
     let results = sortOn cmpResultDistance closestColors
-            where closestColors = getClosestColors inputColor term256Colors
+            where closestColors = getClosestColors inputColor filteredTerm256Colors
 
     -- Output results
     putStrLn "Input: " 
     putStrLn $ colorHex inputColor ++ " " ++  show (colorRgb inputColor)
     putStrLn ""
     putStrLn "Results: "
-    mapM_ (putStrLn . cmpResultToString) $ take 5 results
+    mapM_ (putStrLn . cmpResultToString) $ take 15 results
 
