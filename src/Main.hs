@@ -9,66 +9,17 @@ import Data.List (sortOn, intercalate, nub)
 import Data.Char (isHexDigit, digitToInt, toLower)
 import Data.Aeson
 import Data.Aeson.TH
-import qualified Data.ByteString.Lazy as B
 
-term256ColorsJSON = "term_256_colors.json"
-
-errInvalidInput = "Invalid color hex string passed"
-errTooManyInputsGiven = "Only one input is supported"
-errNoInputsGiven = "No inputs given"
+import Term256Colors
+import Comparators
 
 -- Given an input color property (RGB or hex string), find
 -- the closest Term 256 color using the Euclidean distance
 -- formula.
 
-square :: Int -> Int
-square x = x * x
-
--- TODO: Replace Euclidean distance with a better measurement
---       because it is not the best to get (visually) closest
---       colors.
-euclideanDistance :: [Int] -> [Int] -> Float
-euclideanDistance a b = sqrt . fromIntegral $ sum $ map square $ zipWith (-) a b
-
--- Low-cost approximation of Euclidean Distance
--- Taken from https://www.compuphase.com/cmetric.htm
-weightedEuclideanDistance :: [Int] -> [Int] -> Float
-weightedEuclideanDistance a b = do
-    let r1 = fromIntegral $ head a :: Float
-    let r2 = fromIntegral $ head b :: Float
-    let r = (r1 + r2) / 2
-    let dist = map square $ zipWith (-) a b
-    let weightG = 4.0
-    let weightR = 2 + r / 256
-    let weightB = 2 + ((255 - r) / 256)
-    sqrt $ weightR * fromIntegral (head dist) + weightG * fromIntegral (dist !! 1) + weightB * fromIntegral (last dist)
-
-
-data RGB = RGB
-           { r :: Int
-           , g :: Int
-           , b :: Int
-           } deriving (Generic, Show)
-instance FromJSON RGB
-instance ToJSON RGB
-
-data HSL = HSL
-           { h :: Float
-           , s :: Float
-           , l :: Float
-           } deriving (Generic, Show)
-instance FromJSON HSL
-instance ToJSON HSL
-
-data Term256Color = Term256Color
-                 { colorId :: Int
-                 , hexString ::String 
-                 , rgb :: RGB
-                 , hsl :: HSL
-                 , name :: String
-                 } deriving (Generic, Show)
-instance FromJSON Term256Color
-instance ToJSON Term256Color
+errInvalidInput = "Invalid color hex string passed"
+errTooManyInputsGiven = "Only one input is supported"
+errNoInputsGiven = "No inputs given"
 
 data Color = Color
              { colorHex :: String
@@ -135,7 +86,7 @@ validateArgs i
 main :: IO ()
 main = do
     -- Load the contents of the term 256 JSON.
-    json <- (eitherDecode <$> B.readFile term256ColorsJSON) :: IO (Either String [Term256Color])
+    json <- loadTerm256ColorsFile
     let term256Colors = case json of
             Left err -> error err
             Right content -> [ inputToColor $ normalizeColorHex $ hexString tc | tc <- content]
