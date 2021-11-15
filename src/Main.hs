@@ -70,7 +70,7 @@ inputToColor :: String -> Color
 inputToColor hex = Color {colorHex = map toLower hex, colorRgb = parseHexString hex}
 
 getClosestColors :: Color -> [Color] -> [CmpResult]
-getClosestColors inputColor colors = [CmpResult (colorHex c) (colorRgb c) (getDistance' inputColor c) | c <- colors]
+getClosestColors inputColor colors = [CmpResult (colorHex c) (colorRgb c) (getDistance' c inputColor) | c <- colors]
     where getDistance' from to = weightedEuclideanDistance (colorRgb from) (colorRgb to)
 
 validateArgs :: [String] -> Color
