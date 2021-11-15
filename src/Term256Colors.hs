@@ -6,6 +6,7 @@ module Term256Colors
     , HSL (..)
     , Term256Color (..)
     , loadTerm256ColorsFile
+    , rgbToList
     ) where
 
 import GHC.Generics
@@ -23,6 +24,9 @@ data RGB = RGB
            } deriving (Generic, Show)
 instance FromJSON RGB
 instance ToJSON RGB
+
+rgbToList :: RGB -> [Int]
+rgbToList rgb = [r rgb, g rgb, b rgb]
 
 data HSL = HSL
            { h :: Float
