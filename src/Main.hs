@@ -69,9 +69,9 @@ parseHexString s = hexToDec (take 2 s) : parseHexString (drop 2 s)
 inputToColor :: String -> Color
 inputToColor hex = Color {colorHex = map toLower hex, colorRgb = parseHexString hex}
 
-getClosestColors :: Color -> [Color] -> [CmpResult]
-getClosestColors inputColor colors = [CmpResult (colorHex c) (colorRgb c) (getDistance' c inputColor) | c <- colors]
-    where getDistance' from to = weightedEuclideanDistance (colorRgb from) (colorRgb to)
+getClosestColors :: ([Int] -> [Int] -> Float) -> Color -> [Color] -> [CmpResult]
+getClosestColors distFunc inputColor colors = [CmpResult (colorHex c) (colorRgb c) (getDistance' distFunc c inputColor) | c <- colors]
+    where getDistance' distFunc from to = distFunc (colorRgb from) (colorRgb to)
 
 validateArgs :: [String] -> Color
 validateArgs i 
@@ -102,7 +102,7 @@ main = do
 
     -- Compare colors
     let results = sortOn cmpResultDistance closestColors
-            where closestColors = getClosestColors inputColor filteredTerm256Colors
+            where closestColors = getClosestColors weightedEuclideanDistance inputColor filteredTerm256Colors
 
     -- Output results
     putStrLn "Input: " 
