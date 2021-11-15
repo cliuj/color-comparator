@@ -7,8 +7,7 @@ import GHC.Generics
 import Control.Monad
 import Data.List (sortOn, intercalate, nub)
 import Data.Char (isHexDigit, digitToInt, toLower)
-import Data.Aeson
-import Data.Aeson.TH
+import Text.Printf
 
 import Term256Colors
 import Comparators
@@ -21,13 +20,39 @@ errInvalidInput = "Invalid color hex string passed"
 errTooManyInputsGiven = "Only one input is supported"
 errNoInputsGiven = "No inputs given"
 
-data CmpResult = CmpResult
-                 { cmpResultHex :: String
-                 , cmpResultRgb :: [Int]
-                 , cmpResultDistance :: Float
-                 } deriving (Generic, Show)
-cmpResultToString :: CmpResult -> String
-cmpResultToString result = unwords [cmpResultHex result, show $ cmpResultRgb result, show $ cmpResultDistance result]
+term256EscStr :: String
+term256EscStr = "\ESC[38;5;%dm███████\ESC[0m "
+
+termRgbEscStr :: String
+termRgbEscStr = "\ESC[38;2;%d;%d;%dm███████\ESC[0m "
+
+
+data Result = Result
+              { resultColorId :: Maybe Int
+              , resultHex :: String
+              , resultRgb :: [Int]
+              , resultDistance :: Float
+              } deriving (Generic, Show)
+resultToString :: Result -> String
+resultToString result = printf "%v%s %s %s" display hex rgb distance
+    where
+        hex = resultHex result
+        rgb = show $ resultRgb result
+        distance = show $ resultDistance result
+        display = case resultColorId result of
+            Just id -> displayTerm256Color id
+            Nothing -> ""
+
+displayTerm256Color :: Int -> String
+displayTerm256Color id = printf term256EscStr id
+
+displayRgbColor :: [Int] -> String
+displayRgbColor rgb = printf termRgbEscStr r g b
+    where r = rgb !! 0
+          g = rgb !! 1
+          b = rgb !! 2
+
+data TermResult = TermResult
 
 normalizeColorHex :: String -> String
 normalizeColorHex s
@@ -59,9 +84,10 @@ hexToRgb :: String -> [Int]
 hexToRgb "" = []
 hexToRgb hex = hexToDecimal (take 2 hex) : hexToRgb (drop 2 hex)
 
-getClosestTerm256Colors :: DistanceFunction -> String -> [Term256Color] -> [CmpResult]
-getClosestTerm256Colors f inputHex = map (\tc -> CmpResult (hexString tc) (rgb' tc) (getDistance' f (rgb' tc) (hexToRgb inputHex)))
-    where getDistance' f from to = f from to
+getClosestTerm256Colors :: DistanceFunction -> String -> [Term256Color] -> [Result]
+getClosestTerm256Colors f inputHex = map result
+    where result tc = Result (Just $ colorId tc) (hexString tc) (rgb' tc) (getDistance' f (rgb' tc) (hexToRgb inputHex))
+          getDistance' f from to = f from to
           rgb' c = rgbToList $ rgb c
 
 validateArgs :: [String] -> String
@@ -91,13 +117,11 @@ main = do
     let inputHex = validateArgs i
 
     -- Compare colors
-    let results = sortOn cmpResultDistance closestColors
+    let results = sortOn resultDistance closestColors
             where closestColors = getClosestTerm256Colors weightedEuclideanDistance inputHex filteredTerm256Colors
 
     -- Output results
     putStrLn "Input: " 
-    putStrLn $ inputHex ++ " " ++  show (hexToRgb inputHex)
-    putStrLn ""
+    printf "%v#%s %v %v\n\n" (displayRgbColor $ hexToRgb inputHex) (inputHex) (show $ hexToRgb inputHex) (0.0 :: Float)
     putStrLn "Results: "
-    mapM_ (putStrLn . cmpResultToString) $ take 15 results
-
+    mapM_ (putStrLn . resultToString) $ take 15 results
