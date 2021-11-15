@@ -49,9 +49,9 @@ validateInput s
     where isHexString' = all isHexDigit
           ns = normalizeColorHex s
 
-hexToDec :: String -> Int
-hexToDec "" = 0
-hexToDec f = charToHex' (head f) * 16 ^ (length f - 1) + hexToDec (tail f)
+hexToDecimal :: String -> Int
+hexToDecimal "" = 0
+hexToDecimal f = charToHex' (head f) * 16 ^ (length f - 1) + hexToDecimal (tail f)
     where charToHex' c
             | ch == 'a' = 10
             | ch == 'b' = 11
@@ -62,12 +62,12 @@ hexToDec f = charToHex' (head f) * 16 ^ (length f - 1) + hexToDec (tail f)
             | otherwise = digitToInt c
             where ch = toLower c
 
-parseHexString :: String -> [Int]
-parseHexString "" = []
-parseHexString s = hexToDec (take 2 s) : parseHexString (drop 2 s)
+hexToRgb :: String -> [Int]
+hexToRgb "" = []
+hexToRgb hex = hexToDecimal (take 2 hex) : hexToRgb (drop 2 hex)
 
 inputToColor :: String -> Color
-inputToColor hex = Color {colorHex = map toLower hex, colorRgb = parseHexString hex}
+inputToColor hex = Color {colorHex = map toLower hex, colorRgb = hexToRgb hex}
 
 getClosestColors :: ([Int] -> [Int] -> Float) -> Color -> [Color] -> [CmpResult]
 getClosestColors distFunc inputColor colors = [CmpResult (colorHex c) (colorRgb c) (getDistance' distFunc c inputColor) | c <- colors]
