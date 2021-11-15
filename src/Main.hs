@@ -52,8 +52,6 @@ displayRgbColor rgb = printf termRgbEscStr r g b
           g = rgb !! 1
           b = rgb !! 2
 
-data TermResult = TermResult
-
 normalizeColorHex :: String -> String
 normalizeColorHex s
     | head s == '#' = tail s
