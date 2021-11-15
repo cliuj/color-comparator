@@ -7,6 +7,8 @@ module Comparators
 square :: Int -> Int
 square x = x * x
 
+-- Comparators
+-- NOTE: [Int] -> [Int] -> Float represents [r,g,b] -> [r,g,b] -> distance
 euclideanDistance :: [Int] -> [Int] -> Float
 euclideanDistance a b = sqrt . fromIntegral $ sum $ map square $ zipWith (-) a b
 
