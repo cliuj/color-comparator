@@ -21,13 +21,6 @@ errInvalidInput = "Invalid color hex string passed"
 errTooManyInputsGiven = "Only one input is supported"
 errNoInputsGiven = "No inputs given"
 
-data Color = Color
-             { colorHex :: String
-             , colorRgb :: [Int] 
-             } deriving (Generic, Show)
-instance FromJSON Color
-instance ToJSON Color
-
 data CmpResult = CmpResult
                  { cmpResultHex :: String
                  , cmpResultRgb :: [Int]
@@ -66,22 +59,19 @@ hexToRgb :: String -> [Int]
 hexToRgb "" = []
 hexToRgb hex = hexToDecimal (take 2 hex) : hexToRgb (drop 2 hex)
 
-inputToColor :: String -> Color
-inputToColor hex = Color {colorHex = map toLower hex, colorRgb = hexToRgb hex}
+getClosestTerm256Colors :: DistanceFunction -> String -> [Term256Color] -> [CmpResult]
+getClosestTerm256Colors f inputHex = map (\tc -> CmpResult (hexString tc) (rgb' tc) (getDistance' f (rgb' tc) (hexToRgb inputHex)))
+    where getDistance' f from to = f from to
+          rgb' c = rgbToList $ rgb c
 
-getClosestColors :: DistanceFunction -> Color -> [Color] -> [CmpResult]
-getClosestColors f inputColor colors = [CmpResult (colorHex c) (colorRgb c) (getDistance' f c inputColor) | c <- colors]
-    where getDistance' f from to = f (colorRgb from) (colorRgb to)
-
-validateArgs :: [String] -> Color
-validateArgs i 
+validateArgs :: [String] -> String
+validateArgs i
     | null i = error errNoInputsGiven
     | length i > 1 = error errTooManyInputsGiven
-    | otherwise = inputToColor inputHex
+    | otherwise = inputHex
     where inputHex = case validateInput $ last i of
             Left err -> error err
             Right s -> s
-
      
 main :: IO ()
 main = do
@@ -89,24 +79,24 @@ main = do
     json <- loadTerm256ColorsFile
     let term256Colors = case json of
             Left err -> error err
-            Right content -> [ inputToColor $ normalizeColorHex $ hexString tc | tc <- content]
+            Right colors -> colors
 
     -- Remove grey, black, and whites from the possible list because they shouldn't
     -- match against a color.
     -- TODO: This should be a passable flag
-    let filteredTerm256Colors = filter (\color -> length (nub (colorRgb color)) > 1) term256Colors
+    let filteredTerm256Colors = filter (\termColor -> length (nub $ rgbToList $ rgb termColor) > 1) term256Colors
 
     -- Read user input
     i <- getArgs
-    let inputColor = validateArgs i
+    let inputHex = validateArgs i
 
     -- Compare colors
     let results = sortOn cmpResultDistance closestColors
-            where closestColors = getClosestColors weightedEuclideanDistance inputColor filteredTerm256Colors
+            where closestColors = getClosestTerm256Colors weightedEuclideanDistance inputHex filteredTerm256Colors
 
     -- Output results
     putStrLn "Input: " 
-    putStrLn $ colorHex inputColor ++ " " ++  show (colorRgb inputColor)
+    putStrLn $ inputHex ++ " " ++  show (hexToRgb inputHex)
     putStrLn ""
     putStrLn "Results: "
     mapM_ (putStrLn . cmpResultToString) $ take 15 results
