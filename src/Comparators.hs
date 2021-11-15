@@ -1,6 +1,7 @@
 module Comparators 
     ( euclideanDistance
     , weightedEuclideanDistance
+    , DistanceFunction
     )where
 
 -- Helpers
@@ -9,12 +10,14 @@ square x = x * x
 
 -- Comparators
 -- NOTE: [Int] -> [Int] -> Float represents [r,g,b] -> [r,g,b] -> distance
-euclideanDistance :: [Int] -> [Int] -> Float
+type DistanceFunction = [Int] -> [Int] -> Float
+
+euclideanDistance :: DistanceFunction
 euclideanDistance a b = sqrt . fromIntegral $ sum $ map square $ zipWith (-) a b
 
 -- Low-cost approximation of Euclidean Distance
 -- Taken from https://www.compuphase.com/cmetric.htm
-weightedEuclideanDistance :: [Int] -> [Int] -> Float
+weightedEuclideanDistance :: DistanceFunction
 weightedEuclideanDistance a b = do
     let r = (r1 + r2) / 2
             where r1 = fromIntegral $ head a :: Float

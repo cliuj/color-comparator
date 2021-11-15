@@ -69,9 +69,9 @@ hexToRgb hex = hexToDecimal (take 2 hex) : hexToRgb (drop 2 hex)
 inputToColor :: String -> Color
 inputToColor hex = Color {colorHex = map toLower hex, colorRgb = hexToRgb hex}
 
-getClosestColors :: ([Int] -> [Int] -> Float) -> Color -> [Color] -> [CmpResult]
-getClosestColors distFunc inputColor colors = [CmpResult (colorHex c) (colorRgb c) (getDistance' distFunc c inputColor) | c <- colors]
-    where getDistance' distFunc from to = distFunc (colorRgb from) (colorRgb to)
+getClosestColors :: DistanceFunction -> Color -> [Color] -> [CmpResult]
+getClosestColors f inputColor colors = [CmpResult (colorHex c) (colorRgb c) (getDistance' f c inputColor) | c <- colors]
+    where getDistance' f from to = f (colorRgb from) (colorRgb to)
 
 validateArgs :: [String] -> Color
 validateArgs i 
