@@ -48,7 +48,7 @@ Results:
 **Note**: ███████ will output the color if the terminal supports it. Input color requires terminals with RGB support.
 
 ## Term 256 Data
-The accompanying term_256_colors.json was obtained from: https://www.ditig.com/256-colors-cheat-sheet
+The accompanying `term_256_colors.json` was obtained from: https://www.ditig.com/256-colors-cheat-sheet
 
 ## License
-In accordance with the license (**CC BY-NC-SA 4.0**) used in the JSON data noted in [Term 256 Data](#Term-256-Data), this project will be licensed under CC BY-NC-SA 4.0 as well.  
+In accordance with the license (**CC BY-NC-SA 4.0**) used in the JSON data noted in [Term 256 Data](#Term-256-Data), this project will be licensed under **CC BY-NC-SA 4.0** as well.  
