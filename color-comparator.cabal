@@ -1,18 +1,17 @@
 cabal-version:      2.4
-name:               nearest-term256-color
+name:               color-comparator
 version:            0.1.0.0
 
 synopsis: Hex color to nearest term256 color
 description: 
 
-nearest-term256-color calculates the distance between
-the passed hex color input and returns the top 5 nearest
-term256 color.
+color-comparator compares an input hex color to
+a list of term 256 colors.
 
 bug-reports: 
 license: MIT
 author: cliuj
-homepage: https://github.com/cliuj/nearest-term256-color
+homepage: https://github.com/cliuj/color-comparator
 category: term256
 extra-source-files: CHANGELOG.md
 
@@ -28,7 +27,7 @@ library
         bytestring ^>=0.10.12.0,
     default-language: Haskell2010
 
-executable nearest-term256-color
+executable color-comparator
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
