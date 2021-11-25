@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Main where
 
 import System.Environment
@@ -7,11 +9,11 @@ import GHC.Generics
 import Control.Monad
 import Data.List (sortOn, intercalate, nub)
 import Data.Char (isHexDigit, digitToInt, toLower)
-import Text.Printf
 
+import Data.Map ((!))
 import qualified Data.Map as Map
 
-import Term256Colors
+import Colors as C
 import ResultBuilder
 import Comparators
 
@@ -53,11 +55,12 @@ hexToRgb :: String -> [Int]
 hexToRgb "" = []
 hexToRgb hex = hexToDecimal (take 2 hex) : hexToRgb (drop 2 hex)
 
-getClosestTerm256Colors :: DistanceFunction -> String -> [Term256Color] -> [Result]
-getClosestTerm256Colors f inputHex = map result
-    where result tc = Result (hexString tc) (rgb' tc) (getDistance' f (rgb' tc) (hexToRgb inputHex))
+calculateColorResults :: DistanceFunction -> String -> [Color] -> [Result]
+calculateColorResults f inputHex = map getResult
+    where getResult c = Result (hexString' c) (rgb' c) (getDistance' f (rgb' c) (hexToRgb inputHex))
           getDistance' f from to = f from to
-          rgb' c = rgbToList $ rgb c
+          rgb' = rgb :: Color -> [Int]
+          hexString' = hexString :: Color -> String
 
 validateArgs :: [String] -> String
 validateArgs i
@@ -74,25 +77,28 @@ main = do
     json <- loadTerm256ColorsFile
     let term256Colors = case json of
             Left err -> error err
-            Right colors -> colors
+            Right c -> c
+    let idMap = createIdMap term256Colors
+    let colors = convertTerm256Colors term256Colors
 
     -- Remove grey, black, and whites from the possible list because they shouldn't
     -- match against a color.
     -- TODO: This should be a passable flag
-    let filteredTerm256Colors = filter (\termColor -> length (nub $ rgbToList $ rgb termColor) > 1) term256Colors
-    let idMap = createIdMap term256Colors
+    let filteredColors = filter sameRgb colors
+            where sameRgb c = length (nub $ rgb' c) > 1
+                    where rgb' = rgb :: Color -> [Int]
 
     -- Read user input
     i <- getArgs
     let inputHex = validateArgs i
-    let inputResultString = resultToString (Result inputHex' rgb' dist')
+    let inputResultString = resultToString $ Result inputHex' rgb' dist'
             where rgb' = hexToRgb inputHex
                   dist' = 0.0 :: Float
                   inputHex' = "#" ++ inputHex
 
     -- Compare colors
-    let results = sortOn resultDistance closestColors
-            where closestColors = getClosestTerm256Colors weightedEuclideanDistance inputHex filteredTerm256Colors
+    let results = sortOn resultDistance colorResults
+            where colorResults = calculateColorResults weightedEuclideanDistance inputHex filteredColors
 
     let topResults = take 15 results
 
@@ -101,7 +107,7 @@ main = do
     putStrLn $ buildResult inputResultString [ displayRgbColor $ hexToRgb inputHex ]
     putStrLn "Results: "
     mapM_ (\r -> putStr $ buildResult (resultToString r)
-                                      [ displayTerm256Color (idMap Map.! resultHex r)
-                                      , show $ idMap Map.! resultHex r
+                                      [ displayTerm256Color (idMap ! resultHex r)
+                                      , show $ idMap ! resultHex r
                                       ]
                                       ) topResults
