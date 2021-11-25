@@ -1,15 +1,16 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
-module Term256Colors
-    ( RGB (..)
-    , HSL (..)
+module Colors
+    ( Color (..)
     , Term256Color (..)
+    , RGB
     , loadTerm256ColorsFile
     , rgbToList
     , createIdMap
+    , convertTerm256Colors
     ) where
-
 import GHC.Generics
 import Data.Aeson
 import Data.Aeson.TH
@@ -19,6 +20,11 @@ import qualified Data.ByteString.Lazy as B
 
 term256ColorsJSON :: String
 term256ColorsJSON = "term_256_colors.json"
+
+data Color = Color
+             { rgb :: [Int]
+             , hexString :: String
+             } deriving (Show)
 
 data RGB = RGB
            { r :: Int
@@ -54,4 +60,11 @@ loadTerm256ColorsFile = eitherDecode <$> B.readFile term256ColorsJSON :: IO (Eit
 
 createIdMap :: [Term256Color] -> Map String Int
 createIdMap tcs = Map.fromList (map mapID tcs)
-    where mapID tc = (hexString tc, colorId tc)
+    where mapID tc = (hexString' tc, colorId tc)
+            where hexString' = hexString :: Term256Color -> String
+
+convertTerm256Colors :: [Term256Color] -> [Color]
+convertTerm256Colors = map convert
+    where convert tc = Color (rgbToList $ rgb' tc) (hexString' tc)
+            where rgb' = rgb :: Term256Color -> RGB
+                  hexString' = hexString :: Term256Color -> String
