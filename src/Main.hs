@@ -9,7 +9,10 @@ import Data.List (sortOn, intercalate, nub)
 import Data.Char (isHexDigit, digitToInt, toLower)
 import Text.Printf
 
+import qualified Data.Map as Map
+
 import Term256Colors
+import ResultBuilder
 import Comparators
 
 -- Given an input color property (RGB or hex string), find
@@ -19,38 +22,6 @@ import Comparators
 errInvalidInput = "Invalid color hex string passed"
 errTooManyInputsGiven = "Only one input is supported"
 errNoInputsGiven = "No inputs given"
-
-term256EscStr :: String
-term256EscStr = "\ESC[38;5;%dm███████\ESC[0m "
-
-termRgbEscStr :: String
-termRgbEscStr = "\ESC[38;2;%d;%d;%dm███████\ESC[0m "
-
-
-data Result = Result
-              { resultColorId :: Maybe Int
-              , resultHex :: String
-              , resultRgb :: [Int]
-              , resultDistance :: Float
-              } deriving (Generic, Show)
-resultToString :: Result -> String
-resultToString result = printf "%v%s %s %s" display hex rgb distance
-    where
-        hex = resultHex result
-        rgb = show $ resultRgb result
-        distance = show $ resultDistance result
-        display = case resultColorId result of
-            Just id -> displayTerm256Color id
-            Nothing -> ""
-
-displayTerm256Color :: Int -> String
-displayTerm256Color id = printf term256EscStr id
-
-displayRgbColor :: [Int] -> String
-displayRgbColor rgb = printf termRgbEscStr r g b
-    where r = rgb !! 0
-          g = rgb !! 1
-          b = rgb !! 2
 
 normalizeColorHex :: String -> String
 normalizeColorHex s
@@ -84,7 +55,7 @@ hexToRgb hex = hexToDecimal (take 2 hex) : hexToRgb (drop 2 hex)
 
 getClosestTerm256Colors :: DistanceFunction -> String -> [Term256Color] -> [Result]
 getClosestTerm256Colors f inputHex = map result
-    where result tc = Result (Just $ colorId tc) (hexString tc) (rgb' tc) (getDistance' f (rgb' tc) (hexToRgb inputHex))
+    where result tc = Result (hexString tc) (rgb' tc) (getDistance' f (rgb' tc) (hexToRgb inputHex))
           getDistance' f from to = f from to
           rgb' c = rgbToList $ rgb c
 
@@ -109,17 +80,28 @@ main = do
     -- match against a color.
     -- TODO: This should be a passable flag
     let filteredTerm256Colors = filter (\termColor -> length (nub $ rgbToList $ rgb termColor) > 1) term256Colors
+    let idMap = createIdMap term256Colors
 
     -- Read user input
     i <- getArgs
     let inputHex = validateArgs i
+    let inputResultString = resultToString (Result inputHex' rgb' dist')
+            where rgb' = hexToRgb inputHex
+                  dist' = 0.0 :: Float
+                  inputHex' = "#" ++ inputHex
 
     -- Compare colors
     let results = sortOn resultDistance closestColors
             where closestColors = getClosestTerm256Colors weightedEuclideanDistance inputHex filteredTerm256Colors
 
+    let topResults = take 15 results
+
     -- Output results
     putStrLn "Input: " 
-    printf "%v#%s %v %v\n\n" (displayRgbColor $ hexToRgb inputHex) (inputHex) (show $ hexToRgb inputHex) (0.0 :: Float)
+    putStrLn $ buildResult inputResultString [ displayRgbColor $ hexToRgb inputHex ]
     putStrLn "Results: "
-    mapM_ (putStrLn . resultToString) $ take 15 results
+    mapM_ (\r -> putStr $ buildResult (resultToString r)
+                                      [ displayTerm256Color (idMap Map.! resultHex r)
+                                      , show $ idMap Map.! resultHex r
+                                      ]
+                                      ) topResults

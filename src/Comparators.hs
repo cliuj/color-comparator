@@ -2,7 +2,7 @@ module Comparators
     ( euclideanDistance
     , weightedEuclideanDistance
     , DistanceFunction
-    )where
+    ) where
 
 -- Helpers
 square :: Int -> Int
