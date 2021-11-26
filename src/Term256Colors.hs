@@ -7,11 +7,14 @@ module Term256Colors
     , Term256Color (..)
     , loadTerm256ColorsFile
     , rgbToList
+    , createIdMap
     ) where
 
 import GHC.Generics
 import Data.Aeson
 import Data.Aeson.TH
+import Data.Map (Map)
+import qualified Data.Map as Map
 import qualified Data.ByteString.Lazy as B
 
 term256ColorsJSON :: String
@@ -48,3 +51,7 @@ instance ToJSON Term256Color
 
 loadTerm256ColorsFile :: IO (Either String [Term256Color])
 loadTerm256ColorsFile = eitherDecode <$> B.readFile term256ColorsJSON :: IO (Either String [Term256Color])
+
+createIdMap :: [Term256Color] -> Map String Int
+createIdMap tcs = Map.fromList (map mapID tcs)
+    where mapID tc = (hexString tc, colorId tc)
