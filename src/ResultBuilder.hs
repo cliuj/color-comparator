@@ -22,6 +22,7 @@ data Result = Result
               , resultRgb :: [Int]
               , resultDistance :: Float
               } deriving (Show)
+
 resultToString :: Result -> String
 resultToString result = printf "%s %s %s" hex rgb distance
     where
@@ -30,7 +31,7 @@ resultToString result = printf "%s %s %s" hex rgb distance
         distance = show $ resultDistance result
 
 displayTerm256Color :: Int -> String
-displayTerm256Color id = printf term256EscStr
+displayTerm256Color = printf term256EscStr
 
 displayRgbColor :: [Int] -> String
 displayRgbColor rgb = printf termRgbEscStr r g b
