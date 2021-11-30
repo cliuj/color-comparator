@@ -1,8 +1,10 @@
 module Comparators 
     ( euclideanDistance
     , weightedEuclideanDistance
-    , DistanceFunction
+    , ComparatorFunction
     ) where
+
+import Colors (RGB (..), rgbToList)
 
 -- Helpers
 square :: Int -> Int
@@ -10,21 +12,25 @@ square x = x * x
 
 -- Comparators
 -- NOTE: [Int] -> [Int] -> Float represents [r,g,b] -> [r,g,b] -> distance
-type DistanceFunction = [Int] -> [Int] -> Float
+type ComparatorFunction = RGB -> RGB -> Float
 
-euclideanDistance :: DistanceFunction
-euclideanDistance a b = sqrt . fromIntegral $ sum $ map square $ zipWith (-) a b
+euclideanDistance :: ComparatorFunction
+euclideanDistance a b = sqrt . fromIntegral $ sum $ map square $ zipWith (-) a' b'
+    where a' = rgbToList a
+          b' = rgbToList b
 
 -- Low-cost approximation of Euclidean Distance
 -- Taken from https://www.compuphase.com/cmetric.htm
-weightedEuclideanDistance :: DistanceFunction
+weightedEuclideanDistance :: ComparatorFunction
 weightedEuclideanDistance a b = do
-    let r = (r1 + r2) / 2
-            where r1 = fromIntegral $ head a :: Float
-                  r2 = fromIntegral $ head b :: Float
+    let rmean = (r1 + r2) / 2
+            where r1 = fromIntegral $ r a
+                  r2 = fromIntegral $ r b
     let weightG = 4.0
-    let weightR = 2 + r / 256
-    let weightB = 2 + ((255 - r) / 256)
+    let weightR = 2 + rmean / 256
+    let weightB = 2 + ((255 - rmean) / 256)
     sqrt $ weightR * fromIntegral (head dist) + weightG * fromIntegral (dist !! 1) + weightB * fromIntegral (last dist)
-            where dist = map square $ zipWith (-) a b
+            where dist = map square $ zipWith (-) a' b'
+                    where a' = rgbToList a
+                          b' = rgbToList b
 

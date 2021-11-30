@@ -9,11 +9,14 @@ import GHC.Generics
 import Control.Monad
 import Data.List (sortOn, intercalate, nub)
 import Data.Char (isHexDigit, digitToInt, toLower)
-
 import Data.Map ((!))
 import qualified Data.Map as Map
 
-import Colors as C
+import Text.Regex.TDFA
+
+import Options.Applicative
+
+import Colors
 import ResultBuilder
 import Comparators
 
@@ -21,22 +24,18 @@ import Comparators
 -- the closest Term 256 color using the Euclidean distance
 -- formula.
 
+term256ColorsJSON :: String
+term256ColorsJSON = "term_256_colors.json"
+
 errInvalidInput = "Invalid color hex string passed"
-errTooManyInputsGiven = "Only one input is supported"
-errNoInputsGiven = "No inputs given"
+
+hexColorRegex :: String
+hexColorRegex = "^[#]?[a-fA-F0-9]{6}$"
 
 normalizeColorHex :: String -> String
 normalizeColorHex s
     | head s == '#' = tail s
     | otherwise = s
-
-validateInput :: String -> Either String String
-validateInput s
-        | length ns /= 6 = Left errInvalidInput
-        | not $ isHexString' ns = Left errInvalidInput
-        | otherwise = Right ns
-    where isHexString' = all isHexDigit
-          ns = normalizeColorHex s
 
 hexToDecimal :: String -> Int
 hexToDecimal "" = 0
@@ -51,63 +50,90 @@ hexToDecimal f = charToHex' (head f) * 16 ^ (length f - 1) + hexToDecimal (tail 
             | otherwise = digitToInt c
             where ch = toLower c
 
-hexToRgb :: String -> [Int]
-hexToRgb "" = []
-hexToRgb hex = hexToDecimal (take 2 hex) : hexToRgb (drop 2 hex)
+hexToRgbList :: String -> [Int]
+hexToRgbList "" = []
+hexToRgbList hex = hexToDecimal (take 2 hex) : hexToRgbList (drop 2 hex)
 
-calculateColorResults :: DistanceFunction -> String -> [Color] -> [Result]
+rgbListToRGB :: [Int] -> RGB
+rgbListToRGB rgbs = RGB red green blue
+    where red = head rgbs
+          green = rgbs !! 1
+          blue = rgbs !! 2
+
+calculateColorResults :: ComparatorFunction -> String -> [Color] -> [Result]
 calculateColorResults f inputHex = map getResult
-    where getResult c = Result (hexString' c) (rgb' c) (getDistance' f (rgb' c) (hexToRgb inputHex))
+    where getResult c = Result (hexString' c) (rgb' c) (getDistance' f (rgb' c) (rgbListToRGB $ hexToRgbList inputHex))
           getDistance' f from to = f from to
-          rgb' = rgb :: Color -> [Int]
+          rgb' = rgb :: Color -> RGB
           hexString' = hexString :: Color -> String
 
-validateArgs :: [String] -> String
-validateArgs i
-    | null i = error errNoInputsGiven
-    | length i > 1 = error errTooManyInputsGiven
-    | otherwise = inputHex
-    where inputHex = case validateInput $ last i of
-            Left err -> error err
-            Right s -> s
-     
-main :: IO ()
-main = do
-    -- Load the contents of the term 256 JSON.
-    json <- loadTerm256ColorsFile
-    let term256Colors = case json of
+validateArgs :: String -> String
+validateArgs s
+    | isHexColor = normalizeColorHex s
+    | otherwise = error errInvalidInput
+    where isHexColor = s =~ hexColorRegex :: Bool
+
+app :: Opts -> IO ()
+app (Opts i (Just f)) = do
+    json <- loadJSONFile f
+    let colors = case json of
             Left err -> error err
             Right c -> c
-    let idMap = createIdMap term256Colors
-    let colors = convertTerm256Colors term256Colors
-
-    -- Remove grey, black, and whites from the possible list because they shouldn't
-    -- match against a color.
-    -- TODO: This should be a passable flag
-    let filteredColors = filter sameRgb colors
-            where sameRgb c = length (nub $ rgb' c) > 1
-                    where rgb' = rgb :: Color -> [Int]
-
-    -- Read user input
-    i <- getArgs
+    
     let inputHex = validateArgs i
     let inputResultString = resultToString $ Result inputHex' rgb' dist'
-            where rgb' = hexToRgb inputHex
+            where rgb' = rgbListToRGB $ hexToRgbList inputHex
                   dist' = 0.0 :: Float
                   inputHex' = "#" ++ inputHex
 
     -- Compare colors
-    let results = sortOn resultDistance colorResults
-            where colorResults = calculateColorResults weightedEuclideanDistance inputHex filteredColors
+    let results = sortOn distance colorResults
+            where colorResults = calculateColorResults weightedEuclideanDistance inputHex colors
 
     let topResults = take 15 results
 
     -- Output results
     putStrLn "Input: " 
-    putStrLn $ buildResult inputResultString [ displayRgbColor $ hexToRgb inputHex ]
+    putStrLn $ buildResult inputResultString [ displayRgbColor $ rgbListToRGB $ hexToRgbList inputHex ]
     putStrLn "Results: "
-    mapM_ (\r -> putStr $ buildResult (resultToString r)
-                                      [ displayTerm256Color (idMap ! resultHex r)
-                                      , show $ idMap ! resultHex r
-                                      ]
-                                      ) topResults
+    mapM_ (`printResult` Nothing) topResults
+
+    
+app (Opts i Nothing) = do
+    -- Load the contents of the term 256 JSON.
+    json <- loadJSONFile term256ColorsJSON
+    let colors = case json of
+            Left err -> error err
+            Right c -> c
+    let idMap = createIdMap colors
+
+    let inputHex = validateArgs i
+    let inputResultString = resultToString $ Result inputHex' rgb' dist'
+            where rgb' = rgbListToRGB $ hexToRgbList inputHex
+                  dist' = 0.0 :: Float
+                  inputHex' = "#" ++ inputHex
+
+    -- Compare colors
+    let results = sortOn distance colorResults
+            where colorResults = calculateColorResults weightedEuclideanDistance inputHex colors
+
+    let topResults = take 15 results
+
+    -- Output results
+    putStrLn "Input: " 
+    putStrLn $ buildResult inputResultString [ displayRgbColor $ rgbListToRGB $ hexToRgbList inputHex ]
+    putStrLn "Results: "
+    mapM_ (\r -> printResult r (Just idMap)) topResults
+
+data Opts = Opts 
+            { inputColor :: String
+            , optFile :: Maybe String
+            } deriving (Show)
+optsParser :: Parser Opts
+optsParser = Opts
+        <$> strArgument ( metavar "HEX_COLOR" <> help "Input hex color string")
+        <*> optional ( strOption $ long "file" <> short 'f' <> metavar "COLOR FILE" <> help "File of colors to compare to")
+
+
+main :: IO ()
+main = app =<< execParser ( info optsParser fullDesc )

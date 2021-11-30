@@ -4,12 +4,11 @@
 
 module Colors
     ( Color (..)
-    , Term256Color (..)
-    , RGB
-    , loadTerm256ColorsFile
+    , RGB (..)
+    , IdMap
+    , loadJSONFile
     , rgbToList
     , createIdMap
-    , convertTerm256Colors
     ) where
 import GHC.Generics
 import Data.Aeson
@@ -18,13 +17,8 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.ByteString.Lazy as B
 
-term256ColorsJSON :: String
-term256ColorsJSON = "term_256_colors.json"
-
-data Color = Color
-             { rgb :: [Int]
-             , hexString :: String
-             } deriving (Show)
+loadColorsFile :: String -> IO (Either String [Color])
+loadColorsFile fpath = eitherDecode <$> B.readFile fpath :: IO (Either String [Color])
 
 data RGB = RGB
            { r :: Int
@@ -45,26 +39,22 @@ data HSL = HSL
 instance FromJSON HSL
 instance ToJSON HSL
 
-data Term256Color = Term256Color
-                 { colorId :: Int
+data Color = Color
+                 { colorId :: Maybe Int
                  , hexString ::String 
                  , rgb :: RGB
-                 , hsl :: HSL
-                 , name :: String
+                 , hsl :: Maybe HSL
+                 , name :: Maybe String
                  } deriving (Generic, Show)
-instance FromJSON Term256Color
-instance ToJSON Term256Color
+instance FromJSON Color
+instance ToJSON Color
 
-loadTerm256ColorsFile :: IO (Either String [Term256Color])
-loadTerm256ColorsFile = eitherDecode <$> B.readFile term256ColorsJSON :: IO (Either String [Term256Color])
+loadJSONFile :: String -> IO (Either String [Color])
+loadJSONFile f = eitherDecode <$> B.readFile f :: IO (Either String [Color])
 
-createIdMap :: [Term256Color] -> Map String Int
+type IdMap = Map String (Maybe Int)
+
+createIdMap :: [Color] -> IdMap
 createIdMap tcs = Map.fromList (map mapID tcs)
     where mapID tc = (hexString' tc, colorId tc)
-            where hexString' = hexString :: Term256Color -> String
-
-convertTerm256Colors :: [Term256Color] -> [Color]
-convertTerm256Colors = map convert
-    where convert tc = Color (rgbToList $ rgb' tc) (hexString' tc)
-            where rgb' = rgb :: Term256Color -> RGB
-                  hexString' = hexString :: Term256Color -> String
+            where hexString' = hexString
