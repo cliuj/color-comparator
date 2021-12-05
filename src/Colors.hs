@@ -6,9 +6,11 @@ module Colors
     ( Color (..)
     , RGB (..)
     , IdMap
-    , loadJSONFile
+    , loadColorsFile
     , rgbToList
     , createIdMap
+    , hexToRgbList
+    , rgbListToRGB
     ) where
 import GHC.Generics
 import Data.Aeson
@@ -17,8 +19,12 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.ByteString.Lazy as B
 
+import Data.Maybe (isJust, fromJust)
+
+import Data.Char (isHexDigit, digitToInt, toLower)
+
 loadColorsFile :: String -> IO (Either String [Color])
-loadColorsFile fpath = eitherDecode <$> B.readFile fpath :: IO (Either String [Color])
+loadColorsFile f = eitherDecode <$> B.readFile f
 
 data RGB = RGB
            { r :: Int
@@ -49,12 +55,36 @@ data Color = Color
 instance FromJSON Color
 instance ToJSON Color
 
-loadJSONFile :: String -> IO (Either String [Color])
-loadJSONFile f = eitherDecode <$> B.readFile f :: IO (Either String [Color])
-
-type IdMap = Map String (Maybe Int)
+type IdMap = Map String Int
 
 createIdMap :: [Color] -> IdMap
-createIdMap tcs = Map.fromList (map mapID tcs)
-    where mapID tc = (hexString' tc, colorId tc)
-            where hexString' = hexString
+createIdMap colors = Map.fromList $ map mapID colorsWithIDs
+    where
+        mapID color = (hexString color, fromJust $ colorId color)
+        colorsWithIDs = filter (isJust . colorId) colors
+
+hexToDecimal :: String -> Int
+hexToDecimal "" = 0
+hexToDecimal f = charToHex' (head f) * 16 ^ (length f - 1) + hexToDecimal (tail f)
+    where
+        charToHex' c
+            | ch == 'a' = 10
+            | ch == 'b' = 11
+            | ch == 'c' = 12
+            | ch == 'd' = 13
+            | ch == 'e' = 14
+            | ch == 'f' = 15
+            | otherwise = digitToInt c
+            where
+                ch = toLower c
+
+hexToRgbList :: String -> [Int]
+hexToRgbList "" = []
+hexToRgbList hex = hexToDecimal (take 2 hex) : hexToRgbList (drop 2 hex)
+
+rgbListToRGB :: [Int] -> RGB
+rgbListToRGB rgbs = RGB red green blue
+    where
+        red = head rgbs
+        green = rgbs !! 1
+        blue = rgbs !! 2
