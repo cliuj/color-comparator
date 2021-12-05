@@ -4,18 +4,17 @@ module ResultBuilder
     , resultToString
     , displayTerm256Color
     , displayRgbColor
-    , buildResult
+    , createInputResultString
+    , buildOutput
     , printResult
     ) where
 
 import Text.Printf
-import Data.Map ((!))
+import Data.Map (lookup)
 import Data.Maybe (fromMaybe)
+import qualified Data.Map as Map
 
-import Colors (RGB(..), rgbToList, IdMap)
-
-notTermID :: Int
-notTermID = -1
+import Colors (RGB(..), rgbToList, IdMap, hexToRgbList, rgbListToRGB)
 
 term256EscStr :: String
 term256EscStr = "\ESC[38;5;%dm███████\ESC[0m "
@@ -44,14 +43,19 @@ displayTerm256Color = printf term256EscStr
 displayRgbColor :: RGB -> String
 displayRgbColor rgb = printf termRgbEscStr (r rgb) (g rgb) (b rgb)
 
-buildResult :: String -> [String]-> String
-buildResult r s = unwords s ++ " " ++ r ++ "\n"
-
-printResult :: Result -> Maybe IdMap -> IO ()
-printResult r (Just idMap) = putStr $ buildResult (resultToString r) [ displayColor, termID ]
+createInputResultString :: String -> String
+createInputResultString i = resultToString $ Result inputHex' rgb' dist'
     where
-        displayColor = if id == notTermID then "" else displayTerm256Color id
-        termID = if id == notTermID then "" else show id
-        id = fromMaybe notTermID (idMap ! hexString r)
+        rgb' = rgbListToRGB $ hexToRgbList i
+        dist' = 0.0
+        inputHex' = "#" ++ i
 
-printResult r Nothing = putStr $ buildResult (resultToString r) [ displayRgbColor $ (rgb :: Result -> RGB) r ]
+buildOutput :: String -> [String]-> String
+buildOutput r s = unwords s ++ " " ++ r ++ "\n"
+
+printResult :: Result -> IdMap -> IO ()
+printResult r idMap = putStr $ buildOutput (resultToString r) (displayColor : [ termID ])
+    where
+        displayColor = maybe (displayRgbColor $ rgb r) displayTerm256Color id
+        termID = maybe "" show id
+        id = Map.lookup (hexString r) idMap
