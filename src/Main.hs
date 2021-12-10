@@ -5,15 +5,16 @@
 module Main where
 
 import System.Environment
+import System.Exit
+import System.IO (hPutStrLn, stderr)
 import GHC.Generics
 import Control.Monad
 import Data.List (sortOn, intercalate, nub)
+import Data.List.Split
 import Data.Map ((!))
 import qualified Data.Map as Map
 
-import Data.Maybe (fromMaybe)
-
-import Text.Regex.TDFA
+import Data.Maybe (fromMaybe, isJust)
 
 import Options.Applicative
 
@@ -28,16 +29,6 @@ import Comparators
 term256ColorsJSON :: String
 term256ColorsJSON = "term_256_colors.json"
 
-errInvalidInput = "Invalid color hex string passed"
-
-hexColorRegex :: String
-hexColorRegex = "^[#]?[a-fA-F0-9]{6}$"
-
-normalizeColorHex :: String -> String
-normalizeColorHex s
-    | head s == '#' = tail s
-    | otherwise = s
-
 calculateColorResults :: ComparatorFunction -> String -> [Color] -> [Result]
 calculateColorResults f inputHex = map getResult
     where
@@ -46,13 +37,6 @@ calculateColorResults f inputHex = map getResult
         rgb' c = C.rgb c
         rgb'' = rgbListToRGB $ hexToRgbList inputHex
         hexString' = C.hexString
-
-validateInputHexColor :: String -> String
-validateInputHexColor s
-    | isHexColor = s
-    | otherwise = error errInvalidInput
-    where
-        isHexColor = s =~ hexColorRegex :: Bool
 
 data RunData = RunData
                { inputHexColorData :: String
@@ -69,13 +53,15 @@ printInput inputHexColor = putStrLn $ "Input:\n" ++ buildOutput resultString [ d
 
 printOutput :: Maybe RunData -> IO ()
 printOutput Nothing = putStrLn ""
-printOutput (Just runData) = mapM_ (\r -> printResult r (idMap runData)) nResults
+printOutput (Just runData) = do
+    putStrLn "Results: "
+    mapM_ (\r -> printResult r (idMap runData)) nResults
     where
         nResults = take 15 (resultsData runData)
 
-run :: String -> String -> IO (Maybe RunData)
-run _ "" = return Nothing
-run i f = do
+runWithFile :: String -> String -> IO (Maybe RunData)
+runWithFile _ "" = return Nothing
+runWithFile i f = do
     json <- loadColorsFile f
     let
         colors = case json of
@@ -89,22 +75,42 @@ run i f = do
                 colorResults = calculateColorResults weightedEuclideanDistance i colors
     return $ pure $ RunData i colors results idMap
 
+runWithStr :: String -> String -> IO (Maybe RunData)
+runWithStr _ "" = return Nothing
+runWithStr i cs = do
+    let
+        colors = map hexToColor comparableColors 
+            where
+                comparableColors = filter getHexColors (splitOneOf ", " cs)
+                getHexColors c = not $ null c
+        idMap = createIdMap colors
+
+    -- Compare colors
+    let results = sortOn distance colorResults
+            where
+                colorResults = calculateColorResults weightedEuclideanDistance i colors
+    return $ pure $ RunData i colors results idMap
+
 app :: Opts -> IO ()
 app opts = do
-    let inputHex = normalizeColorHex $ validateInputHexColor (inputColor opts)
+    let inputHex = C.normalizeColorHex $ C.validateInputHexColor (inputColor opts)
     printInput inputHex
-    putStrLn "Results: "
-    run inputHex f >>= printOutput
+
+    when (isJust (inputColors opts)) $ runWithStr inputHex c >>= printOutput
+    when (isJust (optFile opts)) $ runWithFile inputHex f >>= printOutput
         where
             f = fromMaybe term256ColorsJSON (optFile opts)
+            c = fromMaybe "" (inputColors opts)
 
 data Opts = Opts 
             { inputColor :: String
+            , inputColors :: Maybe String
             , optFile :: Maybe String
             } deriving (Show)
 optsParser :: Parser Opts
 optsParser = Opts
         <$> strArgument ( metavar "HEX_COLOR" <> help "Input hex color string")
+        <*> optional ( strArgument $ metavar "HEX_COLORS" <> help "Input hex color strings to compare to")
         <*> optional ( strOption $ long "file" <> short 'f' <> metavar "COLOR FILE" <> help "File of colors to compare to")
 
 
