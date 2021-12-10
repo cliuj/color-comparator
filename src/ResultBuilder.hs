@@ -57,5 +57,5 @@ printResult :: Result -> IdMap -> IO ()
 printResult r idMap = putStr $ buildOutput (resultToString r) (displayColor : [ termID ])
     where
         displayColor = maybe (displayRgbColor $ rgb r) displayTerm256Color id
-        termID = maybe "" show id
+        termID = maybe " " show id
         id = Map.lookup (hexString r) idMap

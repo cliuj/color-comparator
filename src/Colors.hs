@@ -9,8 +9,11 @@ module Colors
     , loadColorsFile
     , rgbToList
     , createIdMap
+    , normalizeColorHex
     , hexToRgbList
+    , hexToColor
     , rgbListToRGB
+    , validateInputHexColor
     ) where
 import GHC.Generics
 import Data.Aeson
@@ -19,9 +22,23 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.ByteString.Lazy as B
 
+import Text.Regex.TDFA
+
 import Data.Maybe (isJust, fromJust)
 
 import Data.Char (isHexDigit, digitToInt, toLower)
+
+
+errInvalidInput = "Invalid color hex string passed"
+
+hexColorRegex :: String
+hexColorRegex = "^[#]?[a-fA-F0-9]{6}$"
+
+normalizeColorHex :: String -> String
+normalizeColorHex s
+    | head s == '#' = tail s
+    | otherwise = s
+
 
 loadColorsFile :: String -> IO (Either String [Color])
 loadColorsFile f = eitherDecode <$> B.readFile f
@@ -88,3 +105,16 @@ rgbListToRGB rgbs = RGB red green blue
         red = head rgbs
         green = rgbs !! 1
         blue = rgbs !! 2
+
+hexToColor :: String -> Color
+hexToColor h = Color Nothing hexString' rgb' Nothing Nothing
+    where
+        rgb' = rgbListToRGB $ hexToRgbList $ normalizeColorHex $ validateInputHexColor h
+        hexString' = if head h /= '#' then "#" ++ h else h
+
+validateInputHexColor :: String -> String
+validateInputHexColor s
+    | isHexColor = s
+    | otherwise = error errInvalidInput
+    where
+        isHexColor = s =~ hexColorRegex :: Bool
