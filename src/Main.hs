@@ -22,8 +22,8 @@ import Colors
 import ResultBuilder
 import Comparators
 
-term256ColorsJSON :: String
-term256ColorsJSON = "term_256_colors.json"
+xterm256ColorsJSON :: String
+xterm256ColorsJSON = "xterm256Colors.json"
 
 calculateColorResults :: ComparatorFunction -> String -> [Color] -> [Result]
 calculateColorResults f fromHex = map getResult
@@ -67,7 +67,7 @@ runWithFile i f = do
     let results = sortOn distance colorResults
             where
                 colorResults = calculateColorResults weightedEuclideanDistance i colors
-    return . pure $ RunData i colors results
+    return . Just $ RunData i colors results
 
 runWithStr :: String -> String -> IO (Maybe RunData)
 runWithStr _ "" = return Nothing
@@ -82,18 +82,18 @@ runWithStr i cs = do
     let results = sortOn distance colorResults
             where
                 colorResults = calculateColorResults weightedEuclideanDistance i colors
-    return . pure $ RunData i colors results
+    return . Just $ RunData i colors results
 
 app :: Opts -> IO ()
 app opts = do
-    let fromHex = removeHexHash $ validateFromHexColor (fromColor opts)
+    let fromHex = removeHexHash . validateFromHexColor $ fromColor opts
 
     printOutput $ Result (hexToColor fromHex) 0.0
 
     let n = nResults opts
     when (isJust $ toColors opts) . join $ printOutputs <$> runWithStr fromHex c <*> return n
     when (isJust $ optFile opts) . join $ printOutputs <$> runWithFile fromHex f <*> return n
-    when (useTerm256 opts) . join $ printOutputs <$> (runWithFile fromHex term256ColorsJSON >>= filterXtermSystemColors) <*> return n
+    when (compareXterm256 opts) . join $ printOutputs <$> (runWithFile fromHex xterm256ColorsJSON >>= filterXtermSystemColors) <*> return n
         where
             f = fromMaybe "" (optFile opts)
             c = fromMaybe "" (toColors opts)
@@ -102,7 +102,7 @@ data Opts = Opts
             { fromColor :: String
             , toColors :: Maybe String
             , optFile :: Maybe String
-            , useTerm256 :: Bool
+            , compareXterm256 :: Bool
             , nResults :: Int
             } deriving (Show)
 optsParser :: Parser Opts
@@ -110,7 +110,7 @@ optsParser = Opts
         <$> strArgument ( metavar "HEX_COLOR" <> help "Hex color string to compare from")
         <*> optional ( strArgument $ metavar "HEX_COLORS" <> help "Hex colors string to compare to")
         <*> optional ( strOption $ long "file" <> short 'f' <> metavar "JSON" <> help "File of colors to compare to")
-        <*> switch ( long "term256" <> help "Compare to Term256 colors")
+        <*> switch ( long "xterm256" <> help "Compare to xterm256 colors")
         <*> option auto ( long "nresults" <> short 'n' <> metavar "INT" <> showDefault <> value 10 <> help "Number of returned results (from each type of comparison)")
 
 
