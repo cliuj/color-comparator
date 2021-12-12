@@ -98,20 +98,23 @@ app opts = do
 
     when (isJust (inputColors opts)) $ runWithStr inputHex c >>= printOutput
     when (isJust (optFile opts)) $ runWithFile inputHex f >>= printOutput
+    when (isJust (term256 opts)) $ runWithFile inputHex term256ColorsJSON >>= printOutput
         where
-            f = fromMaybe term256ColorsJSON (optFile opts)
+            f = fromMaybe "" (optFile opts)
             c = fromMaybe "" (inputColors opts)
 
 data Opts = Opts 
             { inputColor :: String
             , inputColors :: Maybe String
             , optFile :: Maybe String
+            , term256 :: Maybe Bool
             } deriving (Show)
 optsParser :: Parser Opts
 optsParser = Opts
         <$> strArgument ( metavar "HEX_COLOR" <> help "Input hex color string")
         <*> optional ( strArgument $ metavar "HEX_COLORS" <> help "Input hex color strings to compare to")
         <*> optional ( strOption $ long "file" <> short 'f' <> metavar "COLOR FILE" <> help "File of colors to compare to")
+        <*> optional ( switch $ long "term256" <> help "File of colors to compare to")
 
 
 main :: IO ()
