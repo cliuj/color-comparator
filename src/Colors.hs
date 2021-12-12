@@ -13,7 +13,7 @@ module Colors
     , hexToColor
     , hexToRGB
     , rgbListToRGB
-    , validateInputHexColor
+    , validateFromHexColor
     ) where
 import GHC.Generics
 import Data.Aeson
@@ -26,8 +26,8 @@ import Data.Maybe (isJust, fromJust)
 
 import Data.Char (isHexDigit, digitToInt, toLower)
 
-
-errInvalidInput = "Invalid color hex string passed"
+errInvalidHexColorString :: String
+errInvalidHexColorString = "Invalid color hex string passed"
 
 hexColorRegex :: String
 hexColorRegex = "^[#]?[a-fA-F0-9]{6}$"
@@ -107,11 +107,11 @@ hexToColor h = Color Nothing hexString' rgb' Nothing Nothing
         hexString' = removeHexHash h
 
 hexToRGB :: String -> RGB
-hexToRGB = rgbListToRGB . hexToRgbList . removeHexHash . validateInputHexColor
+hexToRGB = rgbListToRGB . hexToRgbList . removeHexHash . validateFromHexColor
 
-validateInputHexColor :: String -> String
-validateInputHexColor s
+validateFromHexColor :: String -> String
+validateFromHexColor s
     | isHexColor = s
-    | otherwise = error $ errInvalidInput ++ " " ++  s
+    | otherwise = error $ errInvalidHexColorString ++ " String: " ++  s
     where
         isHexColor = s =~ hexColorRegex :: Bool
