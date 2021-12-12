@@ -18,8 +18,8 @@ import Data.Maybe (fromMaybe, isJust)
 
 import Options.Applicative
 
-import Colors as C
-import ResultBuilder as RB
+import Colors
+import ResultBuilder
 import Comparators
 
 -- Given an input color property (RGB or hex string), find
@@ -34,7 +34,7 @@ calculateColorResults f inputHex = map getResult
     where
         getResult c = Result c (getDistance' f (rgb' c) rgb'')
         getDistance' f from to = f from to
-        rgb' c = C.rgb c
+        rgb' c = rgb c
         rgb'' = hexToRGB inputHex
 
 data RunData = RunData
@@ -83,7 +83,7 @@ runWithStr i cs = do
 
 app :: Opts -> IO ()
 app opts = do
-    let inputHex = C.normalizeColorHex $ C.validateInputHexColor (inputColor opts)
+    let inputHex = removeHexHash $ validateInputHexColor (inputColor opts)
 
     printOutput $ Result (hexToColor inputHex) 0.0
 
