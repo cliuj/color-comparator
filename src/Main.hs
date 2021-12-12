@@ -43,13 +43,13 @@ data RunData = RunData
                , resultsData :: [Result]
                } deriving (Show)
 
-printOutputs :: Maybe RunData -> IO ()
-printOutputs Nothing = putStrLn ""
-printOutputs (Just runData) = do
+printOutputs :: Maybe RunData -> Int -> IO ()
+printOutputs Nothing _ = putStrLn ""
+printOutputs (Just runData) n = do
     putStrLn "Results: "
-    mapM_ printOutput nResults
+    mapM_ printOutput results
     where
-        nResults = take 15 (resultsData runData)
+        results = take n (resultsData runData)
 
 runWithFile :: String -> String -> IO (Maybe RunData)
 runWithFile _ "" = return Nothing
@@ -87,9 +87,10 @@ app opts = do
 
     printOutput $ Result (hexToColor inputHex) 0.0
 
-    when (isJust (inputColors opts)) $ runWithStr inputHex c >>= printOutputs
-    when (isJust (optFile opts)) $ runWithFile inputHex f >>= printOutputs
-    when (useTerm256 opts) $ runWithFile inputHex term256ColorsJSON >>= printOutputs
+    let n = nResults opts
+    when (isJust $ inputColors opts) . join $ printOutputs <$> runWithStr inputHex c <*> return n
+    when (isJust $ optFile opts) . join $ printOutputs <$> runWithFile inputHex f <*> return n
+    when (useTerm256 opts) . join $ printOutputs <$> runWithFile inputHex term256ColorsJSON <*> return n
         where
             f = fromMaybe "" (optFile opts)
             c = fromMaybe "" (inputColors opts)
@@ -99,13 +100,15 @@ data Opts = Opts
             , inputColors :: Maybe String
             , optFile :: Maybe String
             , useTerm256 :: Bool
+            , nResults :: Int
             } deriving (Show)
 optsParser :: Parser Opts
 optsParser = Opts
         <$> strArgument ( metavar "HEX_COLOR" <> help "Input hex color string")
         <*> optional ( strArgument $ metavar "HEX_COLORS" <> help "Input hex color strings to compare to")
-        <*> optional ( strOption $ long "file" <> short 'f' <> metavar "COLOR FILE" <> help "File of colors to compare to")
+        <*> optional ( strOption $ long "file" <> short 'f' <> metavar "JSON" <> help "File of colors to compare to")
         <*> switch ( long "term256" <> help "File of colors to compare to")
+        <*> option auto ( long "nresults" <> short 'n' <> metavar "INT" <> showDefault <> value 10 <> help "Number of returned results (from each type of comparison)")
 
 
 main :: IO ()
