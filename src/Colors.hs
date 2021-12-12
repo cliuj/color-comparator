@@ -5,10 +5,8 @@
 module Colors
     ( Color (..)
     , RGB (..)
-    , IdMap
     , loadColorsFile
     , rgbToList
-    , createIdMap
     , normalizeColorHex
     , hexToRgbList
     , hexToColor
@@ -18,8 +16,6 @@ module Colors
 import GHC.Generics
 import Data.Aeson
 import Data.Aeson.TH
-import Data.Map (Map)
-import qualified Data.Map as Map
 import qualified Data.ByteString.Lazy as B
 
 import Text.Regex.TDFA
@@ -71,14 +67,6 @@ data Color = Color
                  } deriving (Generic, Show)
 instance FromJSON Color
 instance ToJSON Color
-
-type IdMap = Map String Int
-
-createIdMap :: [Color] -> IdMap
-createIdMap colors = Map.fromList $ map mapID colorsWithIDs
-    where
-        mapID color = (hexString color, fromJust $ colorId color)
-        colorsWithIDs = filter (isJust . colorId) colors
 
 hexToDecimal :: String -> Int
 hexToDecimal "" = 0
