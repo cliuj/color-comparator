@@ -34,7 +34,8 @@ resultToStr :: Result -> String
 resultToStr result = printf "%s %s %.2f" hexString' rgb' distance'
     where
         hexString' = hexString $ color result
-        rgb' = show $ rgbToList $ rgb $ color result
+        rgb' = printf "(%3d,%3d,%3d)" (r rgbs) (g rgbs) (b rgbs) :: String
+        rgbs = rgb $ color result
         distance' = distance result
 
 displayRgbColor :: RGB -> String
@@ -45,7 +46,7 @@ buildOutput r a = tc ++ id ++ " " ++ rs ++ "\n"
     where
         rs = resultToStr r
         tc = termDisplayColor a
-        id = termId a
+        id = printf "%3s" (termId a)
 
 printOutput :: Result -> IO ()
 printOutput r = putStr $ buildOutput r (ResultAddOns displayColor id)
