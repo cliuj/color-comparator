@@ -47,6 +47,13 @@ printOutputs (Just runData) n = do
     where
         results = take n (resultsData runData)
 
+filterXtermSystemColors ::  Maybe RunData -> IO (Maybe RunData)
+filterXtermSystemColors Nothing = return Nothing
+filterXtermSystemColors (Just rd) = return . Just $ rd {resultsData = filtered}
+    where
+        filtered = filter (not . maybe False isXtermSystemColor . colorId . color) (resultsData rd)
+        isXtermSystemColor c = c `elem` [0..15]
+
 runWithFile :: String -> String -> IO (Maybe RunData)
 runWithFile _ "" = return Nothing
 runWithFile i f = do
@@ -86,7 +93,7 @@ app opts = do
     let n = nResults opts
     when (isJust $ toColors opts) . join $ printOutputs <$> runWithStr fromHex c <*> return n
     when (isJust $ optFile opts) . join $ printOutputs <$> runWithFile fromHex f <*> return n
-    when (useTerm256 opts) . join $ printOutputs <$> runWithFile fromHex term256ColorsJSON <*> return n
+    when (useTerm256 opts) . join $ printOutputs <$> (runWithFile fromHex term256ColorsJSON >>= filterXtermSystemColors) <*> return n
         where
             f = fromMaybe "" (optFile opts)
             c = fromMaybe "" (toColors opts)
