@@ -22,23 +22,19 @@ import Colors
 import ResultBuilder
 import Comparators
 
--- Given an input color property (RGB or hex string), find
--- the closest Term 256 color using the Euclidean distance
--- formula.
-
 term256ColorsJSON :: String
 term256ColorsJSON = "term_256_colors.json"
 
 calculateColorResults :: ComparatorFunction -> String -> [Color] -> [Result]
-calculateColorResults f inputHex = map getResult
+calculateColorResults f fromHex = map getResult
     where
         getResult c = Result c (getDistance' f (rgb' c) rgb'')
         getDistance' f from to = f from to
         rgb' c = rgb c
-        rgb'' = hexToRGB inputHex
+        rgb'' = hexToRGB fromHex
 
 data RunData = RunData
-               { inputHexColorData :: String
+               { fromHexColorStr :: String
                , colorsData :: [Color]
                , resultsData :: [Result]
                } deriving (Show)
@@ -83,31 +79,31 @@ runWithStr i cs = do
 
 app :: Opts -> IO ()
 app opts = do
-    let inputHex = removeHexHash $ validateInputHexColor (inputColor opts)
+    let fromHex = removeHexHash $ validateFromHexColor (fromColor opts)
 
-    printOutput $ Result (hexToColor inputHex) 0.0
+    printOutput $ Result (hexToColor fromHex) 0.0
 
     let n = nResults opts
-    when (isJust $ inputColors opts) . join $ printOutputs <$> runWithStr inputHex c <*> return n
-    when (isJust $ optFile opts) . join $ printOutputs <$> runWithFile inputHex f <*> return n
-    when (useTerm256 opts) . join $ printOutputs <$> runWithFile inputHex term256ColorsJSON <*> return n
+    when (isJust $ toColors opts) . join $ printOutputs <$> runWithStr fromHex c <*> return n
+    when (isJust $ optFile opts) . join $ printOutputs <$> runWithFile fromHex f <*> return n
+    when (useTerm256 opts) . join $ printOutputs <$> runWithFile fromHex term256ColorsJSON <*> return n
         where
             f = fromMaybe "" (optFile opts)
-            c = fromMaybe "" (inputColors opts)
+            c = fromMaybe "" (toColors opts)
 
 data Opts = Opts 
-            { inputColor :: String
-            , inputColors :: Maybe String
+            { fromColor :: String
+            , toColors :: Maybe String
             , optFile :: Maybe String
             , useTerm256 :: Bool
             , nResults :: Int
             } deriving (Show)
 optsParser :: Parser Opts
 optsParser = Opts
-        <$> strArgument ( metavar "HEX_COLOR" <> help "Input hex color string")
-        <*> optional ( strArgument $ metavar "HEX_COLORS" <> help "Input hex color strings to compare to")
+        <$> strArgument ( metavar "HEX_COLOR" <> help "Hex color string to compare from")
+        <*> optional ( strArgument $ metavar "HEX_COLORS" <> help "Hex colors string to compare to")
         <*> optional ( strOption $ long "file" <> short 'f' <> metavar "JSON" <> help "File of colors to compare to")
-        <*> switch ( long "term256" <> help "File of colors to compare to")
+        <*> switch ( long "term256" <> help "Compare to Term256 colors")
         <*> option auto ( long "nresults" <> short 'n' <> metavar "INT" <> showDefault <> value 10 <> help "Number of returned results (from each type of comparison)")
 
 
