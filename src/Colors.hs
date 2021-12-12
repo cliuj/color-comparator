@@ -7,7 +7,8 @@ module Colors
     , RGB (..)
     , loadColorsFile
     , rgbToList
-    , normalizeColorHex
+    , addHexHash
+    , removeHexHash
     , hexToRgbList
     , hexToColor
     , hexToRGB
@@ -31,11 +32,15 @@ errInvalidInput = "Invalid color hex string passed"
 hexColorRegex :: String
 hexColorRegex = "^[#]?[a-fA-F0-9]{6}$"
 
-normalizeColorHex :: String -> String
-normalizeColorHex s
-    | head s == '#' = tail s
-    | otherwise = s
+addHexHash :: String -> String
+addHexHash h
+    | head h /= '#' = "#" ++ h
+    | otherwise = h
 
+removeHexHash :: String -> String
+removeHexHash h
+    | head h == '#' = tail h
+    | otherwise = h
 
 loadColorsFile :: String -> IO (Either String [Color])
 loadColorsFile f = eitherDecode <$> B.readFile f
@@ -99,10 +104,10 @@ hexToColor :: String -> Color
 hexToColor h = Color Nothing hexString' rgb' Nothing Nothing
     where
         rgb' = hexToRGB h
-        hexString' = if head h /= '#' then "#" ++ h else h
+        hexString' = removeHexHash h
 
 hexToRGB :: String -> RGB
-hexToRGB = rgbListToRGB . hexToRgbList . normalizeColorHex . validateInputHexColor
+hexToRGB = rgbListToRGB . hexToRgbList . removeHexHash . validateInputHexColor
 
 validateInputHexColor :: String -> String
 validateInputHexColor s

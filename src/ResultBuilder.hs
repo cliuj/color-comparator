@@ -10,7 +10,7 @@ module ResultBuilder
 import Text.Printf
 import Data.Maybe (fromMaybe)
 
-import Colors (Color(..), RGB(..))
+import Colors (Color(..), RGB(..), addHexHash)
 
 term256EscStr :: String
 term256EscStr = "\ESC[38;5;%dm███████\ESC[0m "
@@ -33,7 +33,7 @@ data ResultAddOns = ResultAddOns
 resultToStr :: Result -> String
 resultToStr result = printf "%s %s %.2f" hexString' rgb' distance'
     where
-        hexString' = hexString $ color result
+        hexString' = addHexHash . hexString $ color result
         rgb' = printf "(%3d,%3d,%3d)" (r rgbs) (g rgbs) (b rgbs) :: String
         rgbs = rgb $ color result
         distance' = distance result
