@@ -69,7 +69,6 @@ data Color = Color
                  , hexString ::String 
                  , rgb :: RGB
                  , hsl :: Maybe HSL
-                 , name :: Maybe String
                  } deriving (Generic, Show)
 instance FromJSON Color
 instance ToJSON Color
@@ -101,7 +100,7 @@ rgbListToRGB rgbs = RGB red green blue
         blue = rgbs !! 2
 
 hexToColor :: String -> Color
-hexToColor h = Color Nothing hexString' rgb' Nothing Nothing
+hexToColor h = Color Nothing hexString' rgb' Nothing
     where
         rgb' = hexToRGB h
         hexString' = removeHexHash h

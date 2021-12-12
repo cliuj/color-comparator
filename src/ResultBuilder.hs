@@ -12,11 +12,8 @@ import Data.Maybe (fromMaybe)
 
 import Colors (Color(..), RGB(..), addHexHash)
 
-term256EscStr :: String
-term256EscStr = "\ESC[38;5;%dm███████\ESC[0m "
-
-termRgbEscStr :: String
-termRgbEscStr = "\ESC[38;2;%d;%d;%dm███████\ESC[0m "
+xtermRgbEscStr :: String
+xtermRgbEscStr = "\ESC[38;2;%d;%d;%dm███████\ESC[0m "
 
 -- Result is the base result output returned. Additional outputs can be appended/prepended
 -- to the Result output string.
@@ -26,8 +23,8 @@ data Result = Result
               } deriving (Show)
 
 data ResultAddOns = ResultAddOns
-                    { termDisplayColor :: String
-                    , termId :: String
+                    { xtermDisplayColor :: String
+                    , xtermId :: String
                     }
 
 resultToStr :: Result -> String
@@ -39,14 +36,14 @@ resultToStr result = printf " %s  %s  %.2f" hexString' rgb' distance'
         distance' = distance result
 
 displayRgbColor :: RGB -> String
-displayRgbColor rgb = printf termRgbEscStr (r rgb) (g rgb) (b rgb)
+displayRgbColor rgb = printf xtermRgbEscStr (r rgb) (g rgb) (b rgb)
 
 buildOutput :: Result -> ResultAddOns-> String
 buildOutput r a = tc ++ id ++ " " ++ rs ++ "\n"
     where
         rs = resultToStr r
-        tc = termDisplayColor a
-        id = printf "%3s" (termId a)
+        tc = xtermDisplayColor a
+        id = printf "%3s" (xtermId a)
 
 printOutput :: Result -> IO ()
 printOutput r = putStr $ buildOutput r (ResultAddOns displayColor id)

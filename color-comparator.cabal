@@ -2,18 +2,17 @@ cabal-version:      2.4
 name:               color-comparator
 version:            0.1.0.0
 
-synopsis: Hex color to nearest term256 color
+synopsis: Hex color to nearest xterm256 color
 description: 
 
 color-comparator compares an input hex color to
-a list of term 256 colors.
+a list of xterm256 colors.
 
 bug-reports: 
-license: MIT
+license: CC BY-NC-SA 4.0
 author: cliuj
 homepage: https://github.com/cliuj/color-comparator
-category: term256
-extra-source-files: CHANGELOG.md
+category: xterm256
 
 library
     exposed-modules:
