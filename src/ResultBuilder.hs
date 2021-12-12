@@ -10,7 +10,7 @@ module ResultBuilder
 import Text.Printf
 import Data.Maybe (fromMaybe)
 
-import Colors (Color(..), RGB(..), rgbToList, hexToRgbList, rgbListToRGB)
+import Colors (Color(..), RGB(..))
 
 term256EscStr :: String
 term256EscStr = "\ESC[38;5;%dm███████\ESC[0m "

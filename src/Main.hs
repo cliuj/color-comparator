@@ -35,7 +35,7 @@ calculateColorResults f inputHex = map getResult
         getResult c = Result c (getDistance' f (rgb' c) rgb'')
         getDistance' f from to = f from to
         rgb' c = C.rgb c
-        rgb'' = rgbListToRGB $ hexToRgbList inputHex
+        rgb'' = hexToRGB inputHex
 
 data RunData = RunData
                { inputHexColorData :: String

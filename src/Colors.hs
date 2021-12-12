@@ -10,6 +10,7 @@ module Colors
     , normalizeColorHex
     , hexToRgbList
     , hexToColor
+    , hexToRGB
     , rgbListToRGB
     , validateInputHexColor
     ) where
@@ -97,8 +98,11 @@ rgbListToRGB rgbs = RGB red green blue
 hexToColor :: String -> Color
 hexToColor h = Color Nothing hexString' rgb' Nothing Nothing
     where
-        rgb' = rgbListToRGB $ hexToRgbList $ normalizeColorHex $ validateInputHexColor h
+        rgb' = hexToRGB h
         hexString' = if head h /= '#' then "#" ++ h else h
+
+hexToRGB :: String -> RGB
+hexToRGB = rgbListToRGB . hexToRgbList . normalizeColorHex . validateInputHexColor
 
 validateInputHexColor :: String -> String
 validateInputHexColor s
