@@ -31,10 +31,10 @@ data ResultAddOns = ResultAddOns
                     }
 
 resultToStr :: Result -> String
-resultToStr result = printf "%s %s %.2f" hexString' rgb' distance'
+resultToStr result = printf " %s  %s  %.2f" hexString' rgb' distance'
     where
         hexString' = addHexHash . hexString $ color result
-        rgb' = printf "(%3d,%3d,%3d)" (r rgbs) (g rgbs) (b rgbs) :: String
+        rgb' = printf "(%3d, %3d, %3d)" (r rgbs) (g rgbs) (b rgbs) :: String
         rgbs = rgb $ color result
         distance' = distance result
 

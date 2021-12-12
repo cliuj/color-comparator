@@ -112,6 +112,6 @@ hexToRGB = rgbListToRGB . hexToRgbList . removeHexHash . validateInputHexColor
 validateInputHexColor :: String -> String
 validateInputHexColor s
     | isHexColor = s
-    | otherwise = error errInvalidInput
+    | otherwise = error $ errInvalidInput ++ " " ++  s
     where
         isHexColor = s =~ hexColorRegex :: Bool
