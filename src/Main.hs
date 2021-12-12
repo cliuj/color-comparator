@@ -32,30 +32,22 @@ term256ColorsJSON = "term_256_colors.json"
 calculateColorResults :: ComparatorFunction -> String -> [Color] -> [Result]
 calculateColorResults f inputHex = map getResult
     where
-        getResult c = Result (hexString' c) (rgb' c) (getDistance' f (rgb' c) rgb'')
+        getResult c = Result c (getDistance' f (rgb' c) rgb'')
         getDistance' f from to = f from to
         rgb' c = C.rgb c
         rgb'' = rgbListToRGB $ hexToRgbList inputHex
-        hexString' = C.hexString
 
 data RunData = RunData
                { inputHexColorData :: String
                , colorsData :: [Color]
                , resultsData :: [Result]
-               , idMap :: IdMap
                } deriving (Show)
 
-printInput :: String -> IO ()
-printInput inputHexColor = putStrLn $ "Input:\n" ++ buildOutput resultString [ displayColor ]
-    where
-        resultString = createInputResultString inputHexColor
-        displayColor = displayRgbColor $ rgbListToRGB $ hexToRgbList inputHexColor
-
-printOutput :: Maybe RunData -> IO ()
-printOutput Nothing = putStrLn ""
-printOutput (Just runData) = do
+printOutputs :: Maybe RunData -> IO ()
+printOutputs Nothing = putStrLn ""
+printOutputs (Just runData) = do
     putStrLn "Results: "
-    mapM_ (\r -> printResult r (idMap runData)) nResults
+    mapM_ printOutput nResults
     where
         nResults = take 15 (resultsData runData)
 
@@ -67,13 +59,12 @@ runWithFile i f = do
         colors = case json of
             Left err -> error err
             Right c -> c
-        idMap = createIdMap colors
 
     -- Compare colors
     let results = sortOn distance colorResults
             where
                 colorResults = calculateColorResults weightedEuclideanDistance i colors
-    return $ pure $ RunData i colors results idMap
+    return $ pure $ RunData i colors results
 
 runWithStr :: String -> String -> IO (Maybe RunData)
 runWithStr _ "" = return Nothing
@@ -83,22 +74,22 @@ runWithStr i cs = do
             where
                 comparableColors = filter getHexColors (splitOneOf ", " cs)
                 getHexColors c = not $ null c
-        idMap = createIdMap colors
 
     -- Compare colors
     let results = sortOn distance colorResults
             where
                 colorResults = calculateColorResults weightedEuclideanDistance i colors
-    return $ pure $ RunData i colors results idMap
+    return $ pure $ RunData i colors results
 
 app :: Opts -> IO ()
 app opts = do
     let inputHex = C.normalizeColorHex $ C.validateInputHexColor (inputColor opts)
-    printInput inputHex
 
-    when (isJust (inputColors opts)) $ runWithStr inputHex c >>= printOutput
-    when (isJust (optFile opts)) $ runWithFile inputHex f >>= printOutput
-    when (useTerm256 opts) $ runWithFile inputHex term256ColorsJSON >>= printOutput
+    printOutput $ Result (hexToColor inputHex) 0.0
+
+    when (isJust (inputColors opts)) $ runWithStr inputHex c >>= printOutputs
+    when (isJust (optFile opts)) $ runWithFile inputHex f >>= printOutputs
+    when (useTerm256 opts) $ runWithFile inputHex term256ColorsJSON >>= printOutputs
         where
             f = fromMaybe "" (optFile opts)
             c = fromMaybe "" (inputColors opts)

@@ -1,20 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 module ResultBuilder
     ( Result (..)
-    , resultToString
-    , displayTerm256Color
+    , resultToStr
     , displayRgbColor
-    , createInputResultString
     , buildOutput
-    , printResult
+    , printOutput
     ) where
 
 import Text.Printf
-import Data.Map (lookup)
 import Data.Maybe (fromMaybe)
-import qualified Data.Map as Map
 
-import Colors (RGB(..), rgbToList, IdMap, hexToRgbList, rgbListToRGB)
+import Colors (Color(..), RGB(..), rgbToList, hexToRgbList, rgbListToRGB)
 
 term256EscStr :: String
 term256EscStr = "\ESC[38;5;%dm███████\ESC[0m "
@@ -25,37 +21,34 @@ termRgbEscStr = "\ESC[38;2;%d;%d;%dm███████\ESC[0m "
 -- Result is the base result output returned. Additional outputs can be appended/prepended
 -- to the Result output string.
 data Result = Result
-              { hexString :: String
-              , rgb :: RGB
+              { color :: Color
               , distance :: Float
               } deriving (Show)
 
-resultToString :: Result -> String
-resultToString result = printf "%s %s %s" hexString' rgb' distance'
-    where
-        hexString' = hexString result
-        rgb' = show $ rgbToList $ rgb result
-        distance' = show $ distance result
+data ResultAddOns = ResultAddOns
+                    { termDisplayColor :: String
+                    , termId :: String
+                    }
 
-displayTerm256Color :: Int -> String
-displayTerm256Color = printf term256EscStr
+resultToStr :: Result -> String
+resultToStr result = printf "%s %s %.2f" hexString' rgb' distance'
+    where
+        hexString' = hexString $ color result
+        rgb' = show $ rgbToList $ rgb $ color result
+        distance' = distance result
 
 displayRgbColor :: RGB -> String
 displayRgbColor rgb = printf termRgbEscStr (r rgb) (g rgb) (b rgb)
 
-createInputResultString :: String -> String
-createInputResultString i = resultToString $ Result inputHex' rgb' dist'
+buildOutput :: Result -> ResultAddOns-> String
+buildOutput r a = tc ++ id ++ " " ++ rs ++ "\n"
     where
-        rgb' = rgbListToRGB $ hexToRgbList i
-        dist' = 0.0
-        inputHex' = "#" ++ i
+        rs = resultToStr r
+        tc = termDisplayColor a
+        id = termId a
 
-buildOutput :: String -> [String]-> String
-buildOutput r s = unwords s ++ " " ++ r ++ "\n"
-
-printResult :: Result -> IdMap -> IO ()
-printResult r idMap = putStr $ buildOutput (resultToString r) (displayColor : [ termID ])
+printOutput :: Result -> IO ()
+printOutput r = putStr $ buildOutput r (ResultAddOns displayColor id)
     where
-        displayColor = maybe (displayRgbColor $ rgb r) displayTerm256Color id
-        termID = maybe " " show id
-        id = Map.lookup (hexString r) idMap
+        displayColor = displayRgbColor $ rgb $ color r
+        id = maybe "" show $ colorId $ color r
