@@ -14,7 +14,7 @@ square x = x * x
 type ComparatorFunction = RGB -> RGB -> Float
 
 euclideanDistance :: ComparatorFunction
-euclideanDistance a b = sqrt . fromIntegral $ sum $ map square $ zipWith (-) a' b'
+euclideanDistance a b = sqrt . fromIntegral . sum . map square $ zipWith (-) a' b'
     where
         a' = rgbToList a
         b' = rgbToList b

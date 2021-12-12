@@ -64,7 +64,7 @@ runWithFile i f = do
     let results = sortOn distance colorResults
             where
                 colorResults = calculateColorResults weightedEuclideanDistance i colors
-    return $ pure $ RunData i colors results
+    return . pure $ RunData i colors results
 
 runWithStr :: String -> String -> IO (Maybe RunData)
 runWithStr _ "" = return Nothing
@@ -79,7 +79,7 @@ runWithStr i cs = do
     let results = sortOn distance colorResults
             where
                 colorResults = calculateColorResults weightedEuclideanDistance i colors
-    return $ pure $ RunData i colors results
+    return . pure $ RunData i colors results
 
 app :: Opts -> IO ()
 app opts = do

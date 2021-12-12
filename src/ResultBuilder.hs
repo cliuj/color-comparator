@@ -51,5 +51,5 @@ buildOutput r a = tc ++ id ++ " " ++ rs ++ "\n"
 printOutput :: Result -> IO ()
 printOutput r = putStr $ buildOutput r (ResultAddOns displayColor id)
     where
-        displayColor = displayRgbColor $ rgb $ color r
-        id = maybe "" show $ colorId $ color r
+        displayColor = displayRgbColor . rgb $ color r
+        id = maybe "" show . colorId $ color r
