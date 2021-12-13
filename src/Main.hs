@@ -9,13 +9,11 @@ import System.Exit
 import System.IO (hPutStrLn, stderr)
 import GHC.Generics
 import Control.Monad
-import Data.List (sortOn, intercalate, nub)
+import Data.List (sortOn)
 import Data.List.Split
-import Data.Map ((!))
-import qualified Data.Map as Map
-
 import Data.Maybe (fromMaybe, isJust)
-
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as B
 import Options.Applicative
 
 import Colors
@@ -25,6 +23,11 @@ import Comparators
 xterm256ColorsJSON :: String
 xterm256ColorsJSON = "xterm256Colors.json"
 
+data ColorSource = ColorsFromFile String | ColorsFromStr String
+
+loadColorsFile :: String -> IO (Either String [Color])
+loadColorsFile f = A.eitherDecode <$> B.readFile f
+
 calculateColorResults :: ComparatorFunction -> String -> [Color] -> [Result]
 calculateColorResults f fromHex = map getResult
     where
@@ -33,75 +36,52 @@ calculateColorResults f fromHex = map getResult
         rgb' c = rgb c
         rgb'' = hexToRGB fromHex
 
-data RunData = RunData
-               { fromHexColorStr :: String
-               , colorsData :: [Color]
-               , resultsData :: [Result]
-               } deriving (Show)
-
-printOutputs :: Maybe RunData -> Int -> IO ()
-printOutputs Nothing _ = putStrLn ""
-printOutputs (Just runData) n = do
-    putStrLn "Results: "
-    mapM_ printOutput results
+printOutputs :: String -> Int -> [Result] -> IO ()
+printOutputs s _ [] = putStrLn s
+printOutputs s n r = do
+    putStrLn $ "\nResults compared to: " ++ s
+    mapM_ printResult results
     where
-        results = take n (resultsData runData)
+        results = take n r
 
-filterXtermSystemColors ::  Maybe RunData -> IO (Maybe RunData)
-filterXtermSystemColors Nothing = return Nothing
-filterXtermSystemColors (Just rd) = return . Just $ rd {resultsData = filtered}
-    where
-        filtered = filter (not . maybe False isXtermSystemColor . colorId . color) (resultsData rd)
+filterXtermSystemColors ::  [Result] -> [Result]
+filterXtermSystemColors = filter (not . maybe False isXtermSystemColor . colorId . color)
+    where 
         isXtermSystemColor c = c `elem` [0..15]
 
-runWithFile :: String -> String -> IO (Maybe RunData)
-runWithFile _ "" = return Nothing
-runWithFile i f = do
+getColors :: ColorSource -> IO [Color]
+getColors (ColorsFromFile "") = return []
+getColors (ColorsFromStr "") = return []
+getColors (ColorsFromFile f) = do
     json <- loadColorsFile f
+    case json of
+        Left err -> error err
+        Right c -> return c
+getColors (ColorsFromStr s) = return $ map hexToColor comparableColors
+    where
+        comparableColors = filter (not . null) (splitOneOf ", " s)
+
+getResults :: Color -> [Color] -> [Result]
+getResults fromColor toColors = sortOn distance colorResults
+    where
+        colorResults = calculateColorResults weightedEuclideanDistance (hexString fromColor) toColors
+
+runApp :: Opts -> IO ()
+runApp opts = do
     let
-        colors = case json of
-            Left err -> error err
-            Right c -> c
-
-    -- Compare colors
-    let results = sortOn distance colorResults
-            where
-                colorResults = calculateColorResults weightedEuclideanDistance i colors
-    return . Just $ RunData i colors results
-
-runWithStr :: String -> String -> IO (Maybe RunData)
-runWithStr _ "" = return Nothing
-runWithStr i cs = do
-    let
-        colors = map hexToColor comparableColors 
-            where
-                comparableColors = filter getHexColors (splitOneOf ", " cs)
-                getHexColors c = not $ null c
-
-    -- Compare colors
-    let results = sortOn distance colorResults
-            where
-                colorResults = calculateColorResults weightedEuclideanDistance i colors
-    return . Just $ RunData i colors results
-
-app :: Opts -> IO ()
-app opts = do
-    let fromHex = removeHexHash . validateFromHexColor $ fromColor opts
-
-    printOutput $ Result (hexToColor fromHex) 0.0
-
-    let n = nResults opts
-    when (isJust $ toColors opts) . join $ printOutputs <$> runWithStr fromHex c <*> return n
-    when (isJust $ optFile opts) . join $ printOutputs <$> runWithFile fromHex f <*> return n
-    when (compareXterm256 opts) . join $ printOutputs <$> (runWithFile fromHex xterm256ColorsJSON >>= filterXtermSystemColors) <*> return n
-        where
-            f = fromMaybe "" (optFile opts)
-            c = fromMaybe "" (toColors opts)
+        fromHex = hexToColor . removeHexHash . validateFromHexColor $ fromColor opts
+        n = nResults opts
+        f = fromMaybe "" (compareFile opts)
+        s = fromMaybe "" (toColors opts)
+    putStrLn "From:"; printResult $ Result fromHex 0.0
+    when (isJust $ toColors opts) . printOutputs s n . getResults fromHex =<< getColors (ColorsFromStr s)
+    when (isJust $ compareFile opts) . printOutputs f n . getResults fromHex =<< getColors (ColorsFromFile f)
+    when (compareXterm256 opts) . printOutputs "xterm256" n . filterXtermSystemColors . getResults fromHex =<< getColors (ColorsFromFile xterm256ColorsJSON)
 
 data Opts = Opts 
             { fromColor :: String
             , toColors :: Maybe String
-            , optFile :: Maybe String
+            , compareFile :: Maybe String
             , compareXterm256 :: Bool
             , nResults :: Int
             } deriving (Show)
@@ -115,4 +95,4 @@ optsParser = Opts
 
 
 main :: IO ()
-main = app =<< execParser ( info optsParser fullDesc )
+main = runApp =<< execParser ( info optsParser fullDesc )

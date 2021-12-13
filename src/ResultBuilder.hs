@@ -4,11 +4,10 @@ module ResultBuilder
     , resultToStr
     , displayRgbColor
     , buildOutput
-    , printOutput
+    , printResult
     ) where
 
 import Text.Printf
-import Data.Maybe (fromMaybe)
 
 import Colors (Color(..), RGB(..), addHexHash)
 
@@ -45,8 +44,8 @@ buildOutput r a = tc ++ id ++ " " ++ rs ++ "\n"
         tc = xtermDisplayColor a
         id = printf "%3s" (xtermId a)
 
-printOutput :: Result -> IO ()
-printOutput r = putStr $ buildOutput r (ResultAddOns displayColor id)
+printResult :: Result -> IO ()
+printResult r = putStr $ buildOutput r (ResultAddOns displayColor id)
     where
         displayColor = displayRgbColor . rgb $ color r
         id = maybe "" show . colorId $ color r
