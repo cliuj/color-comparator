@@ -42,7 +42,7 @@ printOutputs s n r = do
     putStrLn $ "\nResults compared to: " ++ s
     mapM_ printResult results
     where
-        results = take n r
+        results = take n (sortOn distance r)
 
 filterXtermSystemColors ::  [Result] -> [Result]
 filterXtermSystemColors = filter (not . maybe False isXtermSystemColor . colorId . color)
@@ -62,9 +62,7 @@ getColors (ColorsFromStr s) = return $ map hexToColor comparableColors
         comparableColors = filter (not . null) (splitOneOf ", " s)
 
 getResults :: Color -> [Color] -> [Result]
-getResults fromColor toColors = sortOn distance colorResults
-    where
-        colorResults = calculateColorResults weightedEuclideanDistance (hexString fromColor) toColors
+getResults fromColor = calculateColorResults weightedEuclideanDistance (hexString fromColor)
 
 runApp :: Opts -> IO ()
 runApp opts = do
@@ -73,10 +71,18 @@ runApp opts = do
         n = nResults opts
         f = fromMaybe "" (compareFile opts)
         s = fromMaybe "" (toColors opts)
+    
     putStrLn "From:"; printResult $ Result fromHex 0.0
-    when (isJust $ toColors opts) . printOutputs s n . getResults fromHex =<< getColors (ColorsFromStr s)
-    when (isJust $ compareFile opts) . printOutputs f n . getResults fromHex =<< getColors (ColorsFromFile f)
-    when (compareXterm256 opts) . printOutputs "xterm256" n . filterXtermSystemColors . getResults fromHex =<< getColors (ColorsFromFile xterm256ColorsJSON)
+    strResults <- getResults fromHex <$> getColors (ColorsFromStr s)
+    fileResults <- getResults fromHex <$> getColors (ColorsFromFile f)
+    xtermResults <- getResults fromHex <$> getColors (ColorsFromFile xterm256ColorsJSON)
+
+    if mergeResults opts then
+        printOutputs "merged" n . concat $ [ strResults, fileResults, xtermResults ]
+    else do
+        when (isJust $ toColors opts) (printOutputs s n strResults)
+        when (isJust $ compareFile opts) (printOutputs f n fileResults)
+        when (compareXterm256 opts) (printOutputs "xterm256" n (filterXtermSystemColors xtermResults))
 
 data Opts = Opts 
             { fromColor :: String
@@ -84,6 +90,7 @@ data Opts = Opts
             , compareFile :: Maybe String
             , compareXterm256 :: Bool
             , nResults :: Int
+            , mergeResults :: Bool
             } deriving (Show)
 optsParser :: Parser Opts
 optsParser = Opts
@@ -92,6 +99,7 @@ optsParser = Opts
         <*> optional ( strOption $ long "file" <> short 'f' <> metavar "JSON" <> help "File of colors to compare to")
         <*> switch ( long "xterm256" <> help "Compare to xterm256 colors")
         <*> option auto ( long "nresults" <> short 'n' <> metavar "INT" <> showDefault <> value 10 <> help "Number of returned results (from each type of comparison)")
+        <*> switch ( long "merge" <> help "Merge different source comparisons into one single result output")
 
 
 main :: IO ()
