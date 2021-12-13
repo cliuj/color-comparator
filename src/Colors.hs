@@ -5,7 +5,6 @@
 module Colors
     ( Color (..)
     , RGB (..)
-    , loadColorsFile
     , rgbToList
     , addHexHash
     , removeHexHash
@@ -16,15 +15,9 @@ module Colors
     , validateFromHexColor
     ) where
 import GHC.Generics
-import Data.Aeson
-import Data.Aeson.TH
-import qualified Data.ByteString.Lazy as B
-
-import Text.Regex.TDFA
-
-import Data.Maybe (isJust, fromJust)
-
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Char (isHexDigit, digitToInt, toLower)
+import Text.Regex.TDFA
 
 errInvalidHexColorString :: String
 errInvalidHexColorString = "Invalid color hex string passed"
@@ -41,9 +34,6 @@ removeHexHash :: String -> String
 removeHexHash h
     | head h == '#' = tail h
     | otherwise = h
-
-loadColorsFile :: String -> IO (Either String [Color])
-loadColorsFile f = eitherDecode <$> B.readFile f
 
 data RGB = RGB
            { r :: Int
