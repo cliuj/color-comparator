@@ -1,49 +1,46 @@
 # color-comparator
 
-A Haskell script used to compare a given hex color string with a list of xterm256 colors.
+A Haskell script used to compare a given hex color string to a set of colors.
 
 ## Setup
 ```
 cd path/to/color-comparator
-cabal build .
+cabal install .
 ```
+An executable will be placed in the `$HOME/.cabal/bin/`.
 
 ## Usage
 In `/path/to/color-comparator`:
 ```
-cabal run . <hex string>
-```
-or
-```
-/path/to/color-comparator/binary <hex string>
+$ color-comparator <hex color string> <list of hex color strings> --file/-f <path/to/json> -n <num of comparisons> [--xterm256] [--merge]
 ```
 
 ### example
 ```
-$ cabal run . fff0f0
+$ color-comparator "fff0f0" "123456 abc123, #eee800, 783bbe" --file test.json --xterm256 -n 5
 ```
 outputs:
 ```
-Up to date
-Input: 
-███████ #fff0f0 [255,240,240] 0.0
+From:
+███████      #fff0f0  (255, 240, 240)  0.00
 
-Results: 
-███████ #ffffd7 [255,255,215] 46.36809
-███████ #ffd7ff [255,215,255] 54.313904
-███████ #ffd7d7 [255,215,215] 61.237244
-███████ #d7ffff [215,255,255] 76.99939
-███████ #d7ffd7 [215,255,215] 82.40999
-███████ #d7d7ff [215,215,255] 86.76927
-███████ #ffffaf [255,255,175] 96.6954
-███████ #ffd7af [255,215,175] 104.64225
-███████ #d7ffaf [215,255,175] 120.63957
-███████ #d7d7af [215,215,175] 127.098015
-███████ #ffafff [255,175,255] 131.7194
-███████ #ffafd7 [255,175,215] 134.72194
-███████ #afffff [175,255,255] 136.36462
-███████ #afffd7 [175,255,215] 139.71512
-███████ #afd7ff [175,215,255] 142.11021
+Results compared to: 123456 abc123, #eee800, 783bbe
+███████      #eee800  (238, 232,   0)  343.84
+███████      #abc123  (171, 193,  35)  346.07
+███████      #783bbe  (120,  59, 190)  431.86
+███████      #123456  ( 18,  52,  86)  584.87
+
+Results compared to: test.json
+███████      #cac4b0  (202, 196, 176)  156.48
+███████      #6d3f5b  (109,  63,  91)  483.56
+███████      #4e3b31  ( 78,  59,  49)  547.40
+
+Results compared to: xterm256
+███████ 255  #eeeeee  (238, 238, 238)  29.67
+███████ 231  #ffffff  (255, 255, 255)  36.74
+███████ 230  #ffffd7  (255, 255, 215)  46.37
+███████ 225  #ffd7ff  (255, 215, 255)  54.31
+███████ 254  #e4e4e4  (228, 228, 228)  54.93
 ```
 **Note**: ███████ will output the color if the terminal supports it. Input color requires terminals with RGB support.
 
